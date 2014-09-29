@@ -194,11 +194,12 @@ namespace std
     mutable pointer ptr;
 #ifndef __GNUC__
 #ifdef __ICL
+#pragma warning(push)
 #pragma warning(disable:80) // a storage class may not be specified here
 #endif
     typename conditional<is_const<deleter_type>::value, deleter_type, mutable deleter_type>::type deleter;
 #ifdef __ICL
-#pragma warning(default:80)
+#pragma warning(pop)
 #endif
 #else
     mutable deleter_type deleter;
@@ -425,11 +426,12 @@ namespace std
     mutable pointer ptr;
   #ifndef __GNUC__
   #ifdef __ICL
+  #pragma warning(push)
   #pragma warning(disable:80) // a storage class may not be specified here
   #endif
     typename conditional<is_const<deleter_type>::value, deleter_type, mutable deleter_type>::type deleter;
   #ifdef __ICL
-  #pragma warning(default:80)
+  #pragma warning(pop)
   #endif
   #else
     mutable deleter_type deleter;
@@ -721,6 +723,7 @@ namespace std
         }
         virtual void dispose() __ntl_nothrow
         {
+          free();
           delete this;
         }
       };
@@ -970,12 +973,12 @@ namespace std
 
       void reset()
       {
-        if(shared){
+        if(shared) {
           if(--shared->use_count == 0)
             free();
-          shared = nullptr,
-            ptr = nullptr;
         }
+        shared = nullptr;
+        ptr = nullptr;
       }
 
       template<class Y> void reset(Y* p)
@@ -1063,11 +1066,13 @@ namespace std
       }
       void free()__ntl_nothrow
       {
-        if(shared){
+        if(shared) {
           shared->free(); // free object, but not counter
-          if(!shared->weak_count)
+          if(shared->weak_count == 0)
             shared->dispose(); // free counter
         }
+        shared = nullptr;
+        ptr = nullptr;
       }
     private:
       shared_data shared;

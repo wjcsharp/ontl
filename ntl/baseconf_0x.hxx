@@ -43,6 +43,8 @@
   #define NTL_CXX_THREADL
   // __func__
   #define NTL_CXX_FUNC
+	// inline namespace
+	#define NTL_CXX_NS
 
   // C++0x attributes
   #define NTL_CXX_ATTRIBUTES
@@ -53,6 +55,8 @@
   #define NTL_CXX_EF
   // explicit conversion operators
   #define NTL_CXX_EXPLICITOP
+  // user-defined literals
+  #define NTL_CXX_UDL
   // initializer lists
   #define NTL_CXX_IL
   // lambda
@@ -84,8 +88,8 @@
 // _MSC_FULL_VER: 
 // VC16 (2010): 160011001 (CTP), 160020506 (beta1), 160021003 (beta2), 160030128 (rc), 160040219 (sp1)
 // VC17 (2012): 170040825 (ctp), 170050214 (b1), 170050727 (sp0), 170051025
-// VC18 (2013): 180020617 (ctp), 180020827 (rc), 180021005 (sp0), 180021114 (Nov2013 CTP), 180030501 (Update 2)
-// VC19 (2014): 190021730 (ctp)
+// VC18 (2013): 180020617 (ctp), 180020827 (rc), 180021005 (sp0), 180021114 (Nov2013 CTP), 180030501 (Update 2), 180030723 (Update 3)
+// VC19 (2014): 190021730 (ctp), 190021901 (ctp2), 190022013 (ctp3)
 
 #define NTL_CXX_AUTO
 #define NTL_CXX_ASSERT
@@ -130,14 +134,19 @@
 #endif
 
 #if _MSC_FULL_VER >= 180020827 // v18 rc
-# define NTL_CXX_EF
 # define NTL_CXX_TT
 #endif
 
-#if _MSC_FULL_VER >= 180021114 // v18 nov2013
+#if _MSC_FULL_VER == 180021114 // v18 nov2013
+# define NTL_CXX_EF
 //# define NTL_CXX_CONSTEXPR
 #endif
 
+#if _MSC_FULL_VER >= 190021730 // v19 ctp1
+# define NTL_CXX_EF
+# define NTL_CXX_NS
+# define NTL_CXX_UDL
+#endif
 
 
 #endif // _MSC_VER >= 1600
@@ -192,12 +201,17 @@
 
 #if __ICL >= 1300
   /** 13.0 */
-#define NTL_CXX_CONSTEXPR
-//#define NTL_CXX_NOEXCEPT  // not work
-#define NTL_CXX_EXPLICITOP
-#define NTL_CXX_IL
-#define NTL_CXX_FOR
-#undef NTL_CXX_CHARS_TYPES  // undefined even with /Qoption,cpp,"--uliterals"
+	#define NTL_CXX_CONSTEXPR
+	//#define NTL_CXX_NOEXCEPT  // not work
+	#define NTL_CXX_EXPLICITOP
+	#define NTL_CXX_IL
+	#define NTL_CXX_FOR
+	#undef NTL_CXX_CHARS_TYPES  // undefined even with /Qoption,cpp,"--uliterals"
+#endif
+
+#if __ICL >= 1400
+  /** 13.0 */
+# define NTL_CXX_NS
 #endif
 
 #endif // __ICL

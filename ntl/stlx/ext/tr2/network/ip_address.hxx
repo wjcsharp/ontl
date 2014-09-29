@@ -77,7 +77,7 @@ namespace std { namespace tr2 { namespace network {
       }
 
       ///\name static members:
-      static address_v4 from_string(const string& str, error_code& ec = throws())
+      static address_v4 from_string(const string_ref& str, error_code& ec = throws())
       {
         if(&ec != &throws())
           ec.clear();
@@ -85,7 +85,7 @@ namespace std { namespace tr2 { namespace network {
           return address_v4();
         bool ok = true;
         bytes_type bytes = {0};
-        string::const_iterator p = str.c_str(), end = str.cend(), dst;
+        string_ref::const_iterator p = str.begin(), end = str.cend(), dst;
         unsigned i;
         for(i = 0; i < 4 && p < end; i++){
           unsigned long v;
@@ -490,6 +490,7 @@ namespace std { namespace tr2 { namespace network {
       }
 
       ///\name members:
+      bool is_unspecified()const{ return v4addr ? v4.is_unspecified() : v6.is_unspecified(); }
       bool is_multicast() const { return v4addr ? v4.is_multicast() : v6.is_multicast(); }
       bool is_v4() const        { return v4addr; }
       bool is_v6() const        { return v4addr == false; }
@@ -520,7 +521,7 @@ namespace std { namespace tr2 { namespace network {
       }
 
       ///\name static members:
-      static address from_string(const string& str, error_code& ec = throws())
+      static address from_string(const string_ref& str, error_code& ec = throws())
       {
         if(&ec != &throws())
           ec.clear();

@@ -39,7 +39,19 @@ namespace ntl {
 
       struct srwlock
       {
-        void* _;
+        union 
+        {
+          struct
+          {
+            uintptr_t Locked  :1;
+            uintptr_t Waiting :1;
+            uintptr_t Waking  :1;
+            uintptr_t MultipleShared :1;
+            uintptr_t Shared  :28;
+          };
+          uintptr_t Value; //-V117
+          void* _; //-V117
+        };
       };
     } // rtl
 
@@ -51,9 +63,12 @@ namespace ntl {
       template<bool Exclusive>
       class guard;
 
-      srwlock()
+      template<bool Exclusive>
+      class try_lock;
+
+      constexpr srwlock()
       {
-        _ = 0;
+        Value = 0;
       }
 
       void acquire(bool exclusive)
@@ -76,6 +91,8 @@ namespace ntl {
       }
     };
 
+
+
     template<bool Exclusive>
     class srwlock::guard
     {
@@ -96,6 +113,37 @@ namespace ntl {
 
       guard(const guard&) __deleted;
       guard& operator=(const guard&) __deleted;
+    };
+
+
+
+    template<bool Exclusive>
+    class srwlock::try_lock
+    {
+    public:
+      static const bool exclusive = Exclusive;
+
+      explicit try_lock(srwlock& m)
+        :m(m)
+      {
+        locked = m.try_acquire(exclusive);
+      }
+      ~try_lock()
+      {
+        if(locked)
+          m.release(exclusive);
+      }
+
+      bool owns_lock() const { return locked; }
+
+      __explicit_operator_bool() const { return __explicit_bool(locked); }
+
+    private:
+      srwlock& m;
+      bool locked;
+
+      try_lock(const try_lock&) __deleted;
+      try_lock& operator=(const try_lock&) __deleted;
     };
 
   } 

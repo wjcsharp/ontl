@@ -16,10 +16,11 @@ namespace std
   template<typename charT, typename traits = char_traits<charT> >
   class basic_string_ref;
 
-  typedef basic_string_ref<char> string_ref;
-  typedef basic_string_ref<char16_t> u16string_ref;
-  typedef basic_string_ref<char32_t> u32string_ref;
-  typedef basic_string_ref<wchar_t> wstring_ref;
+  typedef basic_string_ref<char>      string_ref,     string_view;
+  typedef basic_string_ref<char16_t>  u16string_ref,  u16string_view;
+  typedef basic_string_ref<char32_t>  u32string_ref,  u32string_view;
+  typedef basic_string_ref<wchar_t>   wstring_ref,    wstring_view;
+
 
   // numeric conversions
   int stoi(const string_ref& str, size_t* idx=0, int base=10);
@@ -199,10 +200,10 @@ namespace std
     }
 
     //////////////////////////////////////////////////////////////////////////
-    size_type find(const basic_string_ref& s) const
+    size_type find(const basic_string_ref& s, size_type pos = 0) const
     {
       const charT* const beg = begin(), *p = s.begin();
-      for(size_type xpos = 0, n = s.length(); xpos + n <= len; ++xpos)
+      for(size_type xpos = pos, n = s.length(); xpos + n <= len; ++xpos)
       {
         for(size_type i = 0; i != n; ++i){
           if ( !traits_type::eq(*(beg + xpos  + i), *(p + i)) )
@@ -220,11 +221,39 @@ namespace std
         return npos;
       pointer f = p+pos;
       const charT* e = traits_type::find(f, len-pos, c);
-      return e == nullptr ? npos : (e-f);
+      return e == nullptr ? npos : (e-p);
     }
 
-    size_type rfind(const basic_string_ref& s) const;
-    size_type rfind(charT c) const;
+    size_type rfind(const basic_string_ref& s) const
+    {
+      const size_type cursize = size(), pos = 0, n = s.size();
+      if(!n) return min(pos,cursize);
+      size_type & xpos = pos;
+      if ( xpos > cursize || xpos + n > cursize )
+        xpos = cursize - n;
+      const charT* const beg = begin();
+      while ( xpos + n > 0 )
+      {
+        for ( size_type i = 0; i != n; ++i )
+          if ( !traits_type::eq(*(beg + xpos + i), *(s + i)) )
+            goto next_xpos;
+        return xpos;
+      next_xpos:
+        --xpos;
+      }
+      return npos;
+    }
+
+    size_type rfind(charT c) const
+    {
+      size_type xpos = size();
+      const charT* const beg = begin();
+      while ( xpos-- )
+        if ( traits_type::eq(*(beg + xpos), c) )
+          return xpos;
+      return npos;
+    }
+
     size_type find_first_of(const basic_string_ref& s) const;
     size_type find_first_of(charT c) const;
     size_type find_last_of(const basic_string_ref& s) const;

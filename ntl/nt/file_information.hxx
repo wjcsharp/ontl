@@ -353,6 +353,7 @@ struct file_information<file_rename_information>:
 };
 
 ///\name  FileLinkInformation == 11
+#pragma warning(push)
 #pragma warning(disable:4510 4610)
 struct file_link_information: file_rename_information
 {
@@ -360,7 +361,7 @@ struct file_link_information: file_rename_information
 
   typedef std::unique_ptr<file_link_information> ptr;
 };
-#pragma warning(default:4510 4610)
+#pragma warning(pop)
 
 template<>
 struct file_information<file_link_information>:
@@ -381,7 +382,7 @@ struct file_names_information
   uint32_t FileNameLength;
   wchar_t  FileName[1];
 
-  const_unicode_string name() const { return const_unicode_string(FileName, FileNameLength); }
+  const_unicode_string name() const { return const_unicode_string(FileName, FileNameLength); } //-V106
 };
 
 template<>
@@ -498,6 +499,22 @@ struct file_end_of_file_information
   int64_t EndOfFile;
 };
 
+///\name  FileCompletionInformation == 30
+struct file_completion_information
+{
+  static const file_information_class info_class_type = FileCompletionInformation;
+
+  legacy_handle Port;
+  const void* Key;
+};
+
+///\name  FileIoCompletionNotificationInformation == 41
+struct file_io_completion_notification_information
+{
+  static const file_information_class info_class_type = FileIoCompletionNotificationInformation;
+
+  uint32_t Flags;
+};
 
 ///\name FileNetworkOpenInformation == 34
 struct file_network_open_information
@@ -564,6 +581,7 @@ struct volume_information:
 };
 
 ///\name   FileFsVolumeInformation == 1
+alignas(8)
 struct file_fs_volume_information
 {
   static const fs_information_class info_class_type = FileFsVolumeInformation;
@@ -574,7 +592,7 @@ struct file_fs_volume_information
   bool     SupportsObjects;
   wchar_t  VolumeLabel[1];
 
-  const_unicode_string label() const { return const_unicode_string(VolumeLabel, VolumeLabelLength / sizeof(wchar_t)); }
+  const_unicode_string label() const { return const_unicode_string(VolumeLabel, VolumeLabelLength / sizeof(wchar_t)); } //-V104
 };
 
 template<>

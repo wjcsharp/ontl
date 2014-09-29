@@ -110,23 +110,32 @@ uint64_t
 
 ///\name  Bytes swap
 
-static inline
-uint16_t
-  bswap(uint16_t value)
+static inline int16_t bswap(int16_t value)
 {
   return intrinsic::_byteswap_ushort(value);
 }
 
-static inline
-uint32_t
-  bswap(uint32_t value)
+static inline uint16_t bswap(uint16_t value)
+{
+  return intrinsic::_byteswap_ushort(value);
+}
+
+static inline int32_t bswap(int32_t value)
 {
   return intrinsic::_byteswap_ulong(value);
 }
 
-static inline
-uint64_t
-  bswap(uint64_t value)
+static inline uint32_t bswap(uint32_t value)
+{
+  return intrinsic::_byteswap_ulong(value);
+}
+
+static inline int64_t bswap(int64_t value)
+{
+  return intrinsic::_byteswap_uint64(value);
+}
+
+static inline uint64_t bswap(uint64_t value)
 {
   return intrinsic::_byteswap_uint64(value);
 }
@@ -142,6 +151,9 @@ type
 {
   return bswap(value);
 }
+
+static inline uint8_t big_endian(const uint8_t value) { return value; }
+static inline  int8_t big_endian(const  int8_t value) { return value; }
 
 /// host <-> little-endian
 template<typename type>
@@ -193,7 +205,7 @@ type
 static inline void zero_mem(void* object, size_t n)
 {
   char * const p = reinterpret_cast<char*>(object);
-  for ( unsigned i = 0; i != n; ++i )
+  for ( size_t i = 0; i != n; ++i )
     p[i] = 0; //-V108
 }
 template<typename type>

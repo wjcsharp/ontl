@@ -14,6 +14,7 @@
 #include "../stlx/new.hxx"
 
 #ifdef __ICL
+#pragma warning(push)
 #pragma warning(disable:522) // function attribute redeclared after called
 #endif
 
@@ -73,7 +74,7 @@ inline void __safe_call_new_handler(std::new_handler nh)
     try {
       nh();
     } 
-    catch(const std::bad_alloc&){
+    catch(const std::bad_alloc&){ //-V565
     }
 #else
     __try {
@@ -145,7 +146,7 @@ void __cdecl operator delete[](void* ptr, const std::nothrow_t&) __ntl_nothrow
 }
 
 #ifdef __ICL
-#pragma warning(default:444)
+#pragma warning(pop)
 #endif
 
 #endif//#ifndef NTL_NO_NEW

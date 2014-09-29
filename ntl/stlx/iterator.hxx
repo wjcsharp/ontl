@@ -627,6 +627,7 @@ class istream_iterator
 
 /// 24.5.2 Class template ostream_iterator [lib.ostream.iterator]
 #ifdef __ICL
+#pragma warning(push)
 #pragma warning(disable:444) // [remark] destructor for base class "std::iterator<std::output_iterator_tag, void, void, void, void>" (declared at line 74) is not virtual
 #endif
 template <class T,
@@ -665,7 +666,7 @@ class ostream_iterator
     const char *    delim;
 };//class ostream_iterator
 #ifdef __ICL
-#pragma warning(default:444)
+#pragma warning(pop)
 #endif
 
 /// 24.5.3 Class template istreambuf_iterator [lib.istreambuf.iterator]
@@ -798,6 +799,32 @@ class ostreambuf_iterator
   template <class T, size_t N> inline T* end    (T (&array)[N])           { return array+N;   }
 
 ///\}
+
+  ///\name 24.8 Container access (N4017) [iterator.container]
+  template <class T, size_t N> inline constexpr bool empty(const T (&array)[N]) noexcept { return false; }
+  template <class T, size_t N> inline constexpr size_t size(const T (&array)[N]) noexcept { return N; }
+  template <class T, size_t N> inline constexpr T& front(T (&array)[N]) noexcept { return array[0]; }
+  template <class T, size_t N> inline constexpr T& back(T (&array)[N]) noexcept { return array[N-1]; }
+  template <class T, size_t N> inline constexpr T* data(T (&array)[N]) noexcept { return array; }
+
+  template <class C> inline constexpr bool empty(const C& c) noexcept { return c.empty(); }
+
+#ifdef NTL_CXX_AUTORET
+  template <class C> inline constexpr auto size(const C& c) noexcept -> decltype(c.size()) { return c.size(); }
+
+  template <class C> inline constexpr auto front(C& c) -> decltype(c.front()) { return c.front(); }
+
+  template <class C> inline constexpr auto front(const C& c) -> decltype(c.front()) { return c.front(); }
+
+  template <class C> inline constexpr auto back(C& c) -> decltype(c.back()) { return c.back(); }
+
+  template <class C> inline constexpr auto back(const C& c) -> decltype(c.back()) { return c.back(); }
+
+  template <class C> inline constexpr auto data(C& c) noexcept -> decltype(c.data()) { return c.data(); }
+
+  template <class C> inline constexpr auto data(const C& c) noexcept -> decltype(c.data()) { return c.data(); }
+#endif
+  ///\}
 
 /**@} lib_iterators */
 

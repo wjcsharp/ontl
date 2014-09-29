@@ -208,7 +208,7 @@ template <> struct aligner<256> { __declspec(align(256)) class type {}; };
 template <> struct aligner<512> { __declspec(align(512)) class type {}; };
 template <> struct aligner<1024> { __declspec(align(1024)) class type {}; };
 template <> struct aligner<4096> { __declspec(align(4096)) class type {}; };
-template <> struct aligner<sizeof(max_align_t)> { __declspec(align(8192)) class type {}; };
+template <> struct aligner<8192> { __declspec(align(8192)) class type {}; };
 } // namespace aux
 
 template <std::size_t Len, std::size_t Align>
@@ -216,22 +216,24 @@ struct aligned_storage
 {
   union type
   {
-    private: unsigned char __data[Len];
-    typename aux::aligner<1 + ( Align - 1
-                             | (Align - 1) >> 1
-                             | (Align - 1) >> 2
-                             | (Align - 1) >> 3
-                             | (Align - 1) >> 4
-                             | (Align - 1) >> 5
-                             | (Align - 1) >> 6
-                             | (Align - 1) >> 7
-                             | (Align - 1) >> 8
-                             | (Align - 1) >> 9
-                             | (Align - 1) >> 10
-                             | (Align - 1) >> 11
-                             | (Align - 1) >> 12
-                             | (Align - 1) >> 13 )
-                          >::type __align;
+    private: 
+      unsigned char __data[Len];
+      max_align_t   __align;
+    //typename aux::aligner<1 + ( Align - 1
+    //                         | (Align - 1) >> 1
+    //                         | (Align - 1) >> 2
+    //                         | (Align - 1) >> 3
+    //                         | (Align - 1) >> 4
+    //                         | (Align - 1) >> 5
+    //                         | (Align - 1) >> 6
+    //                         | (Align - 1) >> 7
+    //                         | (Align - 1) >> 8
+    //                         | (Align - 1) >> 9
+    //                         | (Align - 1) >> 10
+    //                         | (Align - 1) >> 11
+    //                         | (Align - 1) >> 12
+    //                         | (Align - 1) >> 13 )
+    //                      >::type __align;
   };
 };
 
@@ -554,6 +556,30 @@ NTL__STLX_DEF_TRAIT(has_nothrow_assign)
 NTL__STLX_DEF_TRAIT2(is_destructible, has_user_destructor)
 NTL__STLX_DEF_TRAIT(has_virtual_destructor)
 
+
+#ifdef NTL_CXX_VT
+
+template<class T, class... Args>
+struct is_constructible: std::integral_constant<bool, __is_constructible(T, Args...)> {};
+
+template<class T>
+struct is_default_constructible: is_constructible<T> {};
+
+template<class T>
+struct is_copy_constructible: is_constructible<T,typename add_lvalue_reference<typename add_const<T>::type>::type> {};
+
+template<class T>
+struct is_move_constructible: is_constructible<T,typename add_rvalue_reference<T>::type> {};
+
+#else
+
+//template<class T, class U>
+//struct is_constructible: std::integral_constant<bool, __is_constructible(T, U)> {};
+
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////
 template <class T> struct is_signed
 //: public integral_constant<bool, (is_arithmetic<T>::value && T(-1) < T(0))> {};
 : public integral_constant<bool, (static_cast<T>(-1) < 0)> {};

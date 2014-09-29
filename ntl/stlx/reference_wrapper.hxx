@@ -144,6 +144,7 @@ namespace std
 #define _NEST(x) x
 #define _EMPTY
 #ifdef __ICL
+#pragma warning(push)
 #pragma warning(disable:424)
 #endif
     NTL_RF_MAKEBASE(_NEST(_EMPTY));
@@ -151,7 +152,7 @@ namespace std
     NTL_RF_MAKEBASE(volatile);
     NTL_RF_MAKEBASE(const volatile);
 #ifdef __ICL
-#pragma warning(default:424)
+#pragma warning(pop)
 #endif
 #undef _EMPTY
 #undef _NEST
@@ -262,6 +263,14 @@ namespace std
   {
     return reference_wrapper<const T>(x.get());
   }
+
+  // do not bind to temporary objects
+  #ifdef NTL_CXX_RV
+  // todo: make something if delete unavailable: decl-only, static_assert or sfinae
+  template <class T> void ref(const T&&) = delete;
+  template <class T> void cref(const T&&) = delete;
+  #endif
+
 
   /**@} lib_refwrap */
   /**@} lib_function_objects */

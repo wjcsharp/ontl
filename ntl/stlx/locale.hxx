@@ -606,9 +606,6 @@ class ctype : public locale::facet, public ctype_base
     _NTL_LOC_VIRTUAL const charT* do_narrow(const charT* low, const charT* high, char dfault, char* dest) const;
     ///\}
 };// class ctype
-#ifdef __ICL
-#pragma warning(disable:444)
-#endif
 
 /// 22.2.1.2 Class template ctype_byname [locale.ctype.byname]
 template <class charT>
@@ -633,9 +630,6 @@ class ctype_byname : public ctype<charT>
     _NTL_LOC_VIRTUAL const charT* do_narrow(const charT* low, const charT* high, char dfault, char* dest) const;
 };
 
-#ifdef __ICL
-#pragma warning(disable:444)
-#endif
 /**
  *	@brief 22.2.1.3 ctype<char> specialization [facet.ctype.special]
  *  @details A specialization ctype<char> is provided so that the member functions on type \c char can be implemented inline.
@@ -810,9 +804,6 @@ template <> class ctype<char>
     const bool          del;
 
 };// class ctype<char>
-#ifdef __ICL
-#pragma warning(default:444)
-#endif
 
 /// 22.2.1.4 Class ctype_byname<char> [lib.locale.ctype.byname.special]
 template <> class ctype_byname<char>
@@ -1862,7 +1853,7 @@ class num_get : public locale::facet
         const numpunct<char_type>& np = use_facet< numpunct<char_type> >(str.getloc());
         const numpunct<char_type>::string_type t = np.truename(), f = np.falsename();
         size_t i = 0, e1 = t.length(), e2 = f.length();
-        unsigned nt = 0, nf = 0; // not true, not false
+        bool nt = false, nf = false; // not true, not false
         do{
           const char_type c = *in;
           if(in == end)
@@ -2371,7 +2362,8 @@ class num_put : public locale::facet
         const charT ts = punct.thousands_sep(),
           ds = punct.decimal_point();
 
-        int group = 0, groupsize = 0, groups = static_cast<int>(vec.size()), i = 0;
+        size_t group = 0, groupsize = 0, groups = vec.size();
+        int i = 0;
         size_t to = _countof(value) - 1;
 
         bool nogroup = vec.empty() || memchr(floatbuf, '.', len) != nullptr;

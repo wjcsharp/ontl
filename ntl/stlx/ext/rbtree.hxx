@@ -49,7 +49,7 @@ namespace std
           enum color_type { black, red, colors };
           union
           {
-            node* child[colors];
+            node* child[colors]; //-V117
             struct {
               node *left_, *right_;
             };
@@ -73,16 +73,17 @@ namespace std
             child[left] = l;
             child[right]= r;
           }
-          node(const T& elem)
+          explicit node(const T& elem)
             :parent_and_color(0 | red),
             elem(elem)
           {
             child[left] = child[right] = nullptr;
           }
 #ifdef NTL_CXX_RV
-          node(T&& elem)
+          template<typename U>
+          explicit node(U&& elem)
             :parent_and_color(0 | red),
-            elem(std::forward<T>(elem))
+            elem(std::forward<U>(elem))
           {
             child[left] = child[right] = nullptr;
           }
@@ -121,6 +122,7 @@ namespace std
           iterator_impl operator++(int){ iterator_impl tmp( *this ); ++*this; return tmp; }
           iterator_impl operator--(int){ iterator_impl tmp( *this ); --*this; return tmp; }
 
+          iterator_impl& operator= (const iterator_impl& i) { p = i.p; return *this; }
           friend bool operator==(const iterator_impl& x, const iterator_impl& y)
           { return x.p == y.p; }
           friend bool operator!=(const iterator_impl& x, const iterator_impl& y)
@@ -162,6 +164,8 @@ namespace std
           const_iterator_impl& operator--()  { p = tree_->next(p, left); return *this; }
           const_iterator_impl operator++(int){ const_iterator_impl tmp( *this ); ++*this; return tmp; }
           const_iterator_impl operator--(int){ const_iterator_impl tmp( *this ); --*this; return tmp; }
+
+          const_iterator_impl& operator= (const const_iterator_impl& i) { p = i.p; return *this; }
 
           friend bool operator==(const const_iterator_impl& x, const const_iterator_impl& y)
           { return x.p == y.p; }
@@ -290,6 +294,30 @@ namespace std
 
         const_iterator find(const value_type& x) const { return const_cast<rb_tree*>(this)->find(x); }
 
+#ifdef NTL_CXX_TYPEOF
+        template<typename K>
+        typename enable_if<__::is_transparent<Compare, K>::value, iterator>::type find(const K& x)
+        {
+          node* p = root_;
+          while ( p )
+          {
+            if(comparator_(x, p->elem))       // elem_less
+              p = p->child[left];
+            else if(comparator_(p->elem, x))  // elem_greater
+              p = p->child[right];
+            else
+              break;//return iterator(p, this);
+          }
+          return make_iterator(p);// returns end() if !p
+        }
+
+        template<typename K>
+        typename enable_if<__::is_transparent<Compare, K>::value, const_iterator>::type find(const K& x) const
+        {
+          return const_cast<rb_tree*>(this)->find<K>(x);
+        }
+#endif
+
         // modifiers
       protected:
         void assign(const rb_tree& x)
@@ -335,6 +363,28 @@ namespace std
           return std::make_pair(insert_impl(place.second, construct_node(std::forward<value_type>(x)), greater), true);
         }
     #endif
+
+    #ifdef NTL_CXX_VT
+        template <class... Args>
+        std::pair<iterator, bool> emplace_hint(const_iterator /*position*/, Args&&... args)
+        {
+          node_type* const np = node_allocator.allocate(1);
+          node_allocator.construct(np, std::forward<Args>(args)...);
+
+          bool greater;
+          std::pair<node*, node*> place = find_node(np->elem, greater);
+          if(!place.first) {
+            // not exists, place node at tree
+            return std::make_pair(insert_impl(place.second, np, greater), true);
+          }
+
+          // exists, destroy created copy
+          node_allocator.destroy(np);
+          node_allocator.deallocate(np, 1);
+          return std::make_pair(make_iterator(place.first), false);
+        }
+    #endif
+
 
         /** returns node & parent node */
         std::pair<node*, node*> find_node(const value_type& elem, bool& greater)

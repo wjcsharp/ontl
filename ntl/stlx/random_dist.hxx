@@ -75,34 +75,42 @@ namespace std
     template<class URNG>
     result_type operator()(URNG& g)
     {
-      return this->operator()(g, param_type(0, numeric_limits<IntType>::max()));
+      return this->operator()(g, p);
     }
     template<class URNG>
-    result_type operator()(URNG& g, const param_type& parm)
+    result_type operator()(URNG& g, const param_type& p)
     {
       typedef typename make_unsigned<result_type>::type R;
       typedef typename make_unsigned<typename URNG::result_type>::type UR;
       typedef typename conditional<( sizeof(R) > sizeof(UR) ), R, UR>::type T;
 
-      const T umin = g.min(), umax = g.max(), uspace = umax-umin, space = max()-min();
+      assert(p.first <= p.second);
+      const T umin = g.min(), umax = g.max(), uspace = umax-umin, pspace = p.second - p.first;
       T re;
-      if(uspace > space){
+      if(uspace > pspace) {
         // zoom out
-        const T scale = uspace / (space+1),
-          up = uspace * scale;
+        const T space = pspace+1,
+          scale = uspace / space,
+          up = scale * space;
+
         do {
           re = static_cast<T>(g()) - umin;
         } while(re >= up);
-        re /= scale;
-      }else if(uspace < space){
-        // zoom in
-        T x, us = uspace+1;
-        do{
-          x = us * this->operator()(g, param_type(0, static_cast<IntType>(space / us)));
-          re = x + (static_cast<T>(g()) - umin);
-        } while(re > space || re < x);
 
-      }else{
+        re /= scale;
+
+      } else if(uspace < pspace) {
+        // zoom in
+        T x;
+        const T space = uspace+1;
+        const param_type smaller(0, space != 0 ? static_cast<IntType>(pspace / space) : IntType());
+        do {
+          x = space * this->operator()(g, smaller);
+          re = x + ( static_cast<T>(g()) - umin );
+        } while(re > pspace || re < x);
+
+      } else {
+        // equal space
         re = static_cast<T>(g()) - umin;
       }
       return static_cast<IntType>(re + p.first);
@@ -126,13 +134,13 @@ namespace std
     template<typename charT, typename traits>
     friend basic_ostream<charT, traits>& operator<<(basic_ostream<charT, traits>& os, const uniform_int_distribution& x)
     {
-      saveiostate s(os); os.flags(ios_base::dec|ios_base::left|ios_base::fixed);
+      saveiostate s(os); os.flags(ios_base::dec|ios_base::left|ios_base::fixed); //-V808
       return os << setfill(' ') << x.a() << ' ' << x.b();
     }
     template<typename charT, typename traits>
     friend basic_istream<charT, traits>& operator>>(basic_istream<charT, traits>& is, uniform_int_distribution& x)
     {
-      saveiostate s(is); is.flags(ios_base::dec|ios_base::skipws);
+      saveiostate s(is); is.flags(ios_base::dec|ios_base::skipws); //-V808
       return is >> x.p.first >> x.p.second;
     }
     ///\}
@@ -193,14 +201,14 @@ namespace std
     template<typename charT, typename traits>
     friend basic_ostream<charT, traits>& operator<<(basic_ostream<charT, traits>& os, const uniform_real_distribution& x)
     {
-      saveiostate s(os); os.flags(ios_base::left|ios_base::scientific);
+      saveiostate s(os); os.flags(ios_base::left|ios_base::scientific); //-V808
       return os << setfill(' ') << setprecision(numeric_limits<RealType>::digits10)
         << x.a() << ' ' << x.b();
     }
     template<typename charT, typename traits>
     friend basic_istream<charT, traits>& operator>>(basic_istream<charT, traits>& is, uniform_real_distribution& x)
     {
-      saveiostate s(is); is.flags(ios_base::dec|ios_base::skipws);
+      saveiostate s(is); is.flags(ios_base::dec|ios_base::skipws); //-V808
       return is >> x.p.first >> x.p.second;
     }
     ///\}
@@ -296,7 +304,7 @@ namespace std
     template<typename charT, typename traits>
     friend basic_ostream<charT, traits>& operator<<(basic_ostream<charT, traits>& os, const normal_distribution& x)
     {
-      saveiostate s(os); os.flags(ios_base::scientific|ios_base::left);
+      saveiostate s(os); os.flags(ios_base::scientific|ios_base::left); //-V808
       const charT w = os.widen(' ');
       os<< setfill(' ') << setprecision(numeric_limits<RealType>::digits10) 
         << x.mean() << w
@@ -309,7 +317,7 @@ namespace std
     template<typename charT, typename traits>
     friend basic_istream<charT, traits>& operator>>(basic_istream<charT, traits>& is, normal_distribution& x)
     {
-      saveiostate s(is); is.flags(ios_base::dec|ios_base::skipws);
+      saveiostate s(is); is.flags(ios_base::dec|ios_base::skipws); //-V808
       is >> x.p.first >> x.p.second;
       is >> x.res.second;
       if(x.res.second)

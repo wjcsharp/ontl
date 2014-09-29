@@ -31,7 +31,7 @@ namespace std { namespace tr2 {
       address_in_use = ntl::nt::win32_error::wsaeaddrinuse,
       address_not_available = ntl::nt::win32_error::wsaeaddrnotavail,
       already_connected = ntl::nt::win32_error::wsaeisconn,
-      bad_file_descriptor = ntl::nt::win32_error::invalid_handle,
+      bad_file_descriptor = ntl::nt::win32_error::wsaenotsock,
       broken_pipe = ntl::nt::win32_error::broken_pipe,
       connection_aborted = ntl::nt::win32_error::wsaeconnaborted,
       connection_already_in_progress = ntl::nt::win32_error::wsaealready,
@@ -66,7 +66,8 @@ namespace std { namespace tr2 {
       // miscellaneous errors:
       already_open = ntl::nt::win32_error::wsaealready,
       eof = ntl::nt::win32_error::handle_eof,
-      not_found =  ntl::nt::win32_error::not_found
+      not_found =  ntl::nt::win32_error::not_found,
+      operation_aborted = ntl::nt::win32_error::operation_aborted,
     };
 
     class network_error_category:

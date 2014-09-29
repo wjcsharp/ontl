@@ -55,7 +55,7 @@ namespace ntl {
         legacy_handle     ExclusiveSemaphore;
         uint32_t          NumberOfWaitingExclusive;
 
-        int32_t           NumberOfActive;
+        int32_t           NumberOfActive; // negative: exclusive acquire; zero: not acquired; positive: shared acquire(s)
         legacy_handle     ExclusiveOwnerThread;
 
         enum flags { None, LongTerm };
@@ -166,9 +166,11 @@ namespace ntl {
       RtlConvertSharedToExclusive,
       RtlConvertExclusiveToShared;
  
+    NTL_EXTERNAPI 
     bool __stdcall
       RtlAcquireResourceShared(rtl::resource* Resource, bool Wait);
 
+    NTL_EXTERNAPI 
     bool __stdcall
       RtlAcquireResourceExclusive(rtl::resource* Resource, bool Wait);
 
@@ -185,6 +187,8 @@ namespace ntl {
       ntl::noncopyable
     {
     public:
+      class guard;
+
       /** Constructs CS object */
       critical_section()
       {
@@ -319,6 +323,29 @@ namespace ntl {
       void spin_count(uint32_t SpinCount)
       {
         ntl::nt::RtlSetCriticalSectionSpinCount(this, SpinCount);
+      }
+    };
+
+    class critical_section::guard
+    {
+      guard(const guard&) __deleted;
+      guard& operator=(const guard&) __deleted;
+
+      critical_section& m;
+    public:
+      explicit guard(critical_section& m)
+        : m(m)
+      {
+        m.acquire();
+      }
+      explicit guard(rtl::critical_section& cs)
+        : m(static_cast<critical_section&>(cs))
+      {
+        m.acquire();
+      }
+      ~guard()
+      {
+        m.release();
       }
     };
 

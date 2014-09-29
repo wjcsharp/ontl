@@ -315,6 +315,10 @@
 						>
 					</File>
 					<File
+						RelativePath=".\stlx\ext\join.hxx"
+						>
+					</File>
+					<File
 						RelativePath=".\stlx\ext\numeric_conversions.hxx"
 						>
 					</File>
@@ -386,6 +390,10 @@
 							>
 						</File>
 						<File
+							RelativePath=".\stlx\ext\tr2\stream_mutex.hxx"
+							>
+						</File>
+						<File
 							RelativePath=".\stlx\ext\tr2\timer.hxx"
 							>
 						</File>
@@ -410,6 +418,10 @@
 							</File>
 							<File
 								RelativePath=".\stlx\ext\tr2\network\network_fwd.hxx"
+								>
+							</File>
+							<File
+								RelativePath=".\stlx\ext\tr2\network\placeholders.hxx"
 								>
 							</File>
 							<File
@@ -447,11 +459,19 @@
 									Name="winsock"
 									>
 									<File
+										RelativePath=".\stlx\ext\tr2\network\winsock\dns_ops.hxx"
+										>
+									</File>
+									<File
 										RelativePath=".\stlx\ext\tr2\network\winsock\service_resolve.hxx"
 										>
 									</File>
 									<File
 										RelativePath=".\stlx\ext\tr2\network\winsock\service_sockets.hxx"
+										>
+									</File>
+									<File
+										RelativePath=".\stlx\ext\tr2\network\winsock\socket_ops.hxx"
 										>
 									</File>
 									<File
@@ -512,6 +532,26 @@
 								RelativePath=".\stlx\ext\tr2\network\timer.hxx"
 								>
 							</File>
+							<Filter
+								Name="iocp"
+								>
+								<File
+									RelativePath=".\stlx\ext\tr2\network\iocp\complete_op.hxx"
+									>
+								</File>
+								<File
+									RelativePath=".\stlx\ext\tr2\network\iocp\iocp_service.hxx"
+									>
+								</File>
+								<File
+									RelativePath=".\stlx\ext\tr2\network\iocp\op.hxx"
+									>
+								</File>
+								<File
+									RelativePath=".\stlx\ext\tr2\network\iocp\wait_op.hxx"
+									>
+								</File>
+							</Filter>
 						</Filter>
 						<Filter
 							Name="filesystem"
@@ -859,6 +899,10 @@
 						>
 					</File>
 					<File
+						RelativePath=".\stlx\shared_mutex.hxx"
+						>
+					</File>
+					<File
 						RelativePath=".\stlx\stdexcept.hxx"
 						>
 					</File>
@@ -968,6 +1012,10 @@
 					</File>
 					<File
 						RelativePath=".\stlx\type_traits.hxx"
+						>
+					</File>
+					<File
+						RelativePath=".\stlx\type_traits_aliases.hxx"
 						>
 					</File>
 					<File

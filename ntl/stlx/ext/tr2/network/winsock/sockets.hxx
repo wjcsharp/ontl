@@ -61,7 +61,7 @@ namespace ntl { namespace network {
     };
 
 
-#pragma warning(push, 4)
+#pragma warning(push)
 #pragma warning(disable: 4201)
 
     struct sockerror
@@ -105,7 +105,7 @@ namespace ntl { namespace network {
 
         io_pending                 = win32_error::io_pending,
         io_incomplete              = win32_error::io_incomplete,
-        invalid_handle             = win32_error::invalid_handle,
+        invalid_handle             = win32_error::wsaenotsock,
         invalid_parameter          = win32_error::invalid_parameter,
         not_enough_memory          = win32_error::not_enough_memory,
         operation_aborted          = win32_error::operation_aborted,
@@ -205,30 +205,31 @@ namespace ntl { namespace network {
 
     namespace wsa
     {
+      enum socket_flags {
+        socket_overlapped           = 0x01,
+        socket_multipoint_c_root    = 0x02,
+        socket_multipoint_c_leaf    = 0x04,
+        socket_multipoint_d_root    = 0x08,
+        socket_multipoint_d_leaf    = 0x10,
+        socket_access_system_security=0x40,
+      };
+      __ntl_bitmask_type(socket_flags, inline);
+
+
       struct wsabuf_t
       {
         uint32_t  len;
         char*     buf;
       };
 
-      struct overlapped
-      {
-        uintptr_t     Internal, InternalHigh;
-        union {
-          struct { 
-            uint32_t  Offset, OffsetHigh;
-          };
-          void*       Pointer; //-V117
-        };
-        legacy_handle hEvent;
+      typedef ntl::nt::overlapped overlapped;
 
-        typedef void __stdcall completion_routine_t(
-          uint32_t    ErrorCode,
-          uint32_t    Transferred,
-          overlapped* Overlapped,
-          uint32_t    Flags
-          );
-      };
+      typedef void __stdcall completion_routine_t(
+        uint32_t    ErrorCode,
+        uint32_t    Transferred,
+        overlapped* Overlapped,
+        uint32_t    Flags
+        );
 
       struct protocol_chain
       {
@@ -238,8 +239,9 @@ namespace ntl { namespace network {
 
       struct protocol_info
       {
-        uint32_t      ServiceFlags[4], ProviderFlags;
-        nt::guid          ProviderId;
+        uint32_t      ServiceFlags[4];
+        uint32_t      ProviderFlags;
+        nt::guid      ProviderId;
         uint32_t      CatalogEntryId;
         protocol_chain* ProtocolChain;
         int32_t       Version, AddressFamily, MaxSockAddr, MinSockAddr;
@@ -311,15 +313,33 @@ namespace ntl { namespace network {
       typedef int __stdcall  Cleanup_t();
       typedef int  __stdcall GetLastError_t();
       typedef void __stdcall SetLastError_t(int Error);
+
       typedef socket __stdcall SocketW_t(int af, int type, int protocol, const protocol_info* ProtocolInfo, uint32_t, 
         uint32_t Flags);
+
       typedef int __stdcall Connect_t(socket s, const sockaddr* name, int namelen, const wsabuf_t* CallerData, wsabuf_t* CalleeData, void* sQos, void* gQos);
+
       typedef int __stdcall Recv_t(socket s, wsabuf_t Buffers[], uint32_t BuffersCount, uint32_t* Received, 
-        uint32_t* Flags, overlapped* Overlapped, overlapped::completion_routine_t* CompletionRoutine);
+        uint32_t* Flags, overlapped* Overlapped, completion_routine_t* CompletionRoutine);
+
+      typedef int __stdcall RecvFrom_t(socket s, wsabuf_t Buffers[], uint32_t BuffersCount, uint32_t* Received, 
+        uint32_t* Flags, sockaddr* from, int* namelen, overlapped* Overlapped, completion_routine_t* CompletionRoutine);
+
+      typedef int __stdcall Send_t(socket s, const wsabuf_t Buffers[], uint32_t BuffersCount, uint32_t* Sent, 
+        uint32_t  Flags, overlapped* Overlapped, completion_routine_t* CompletionRoutine);
+
+      typedef int __stdcall SendTo_t(socket s, const wsabuf_t Buffers[], uint32_t BuffersCount, uint32_t* Sent, 
+        uint32_t  Flags, const sockaddr* name, int namelen, overlapped* Overlapped, completion_routine_t* CompletionRoutine);
+
+      typedef int __stdcall Ioctl_t(socket s, uint32_t ControlCode, const void* InBuffer, uint32_t InBufferSize,
+        void* OutBuffer, uint32_t OutBufferSize, uint32_t* Returned, overlapped* Overlapped, completion_routine_t* CompletionRoutine);
 
       typedef int __stdcall StringToAddressW_t(wchar_t* name, int family, const protocol_info* ProtocolInfo, sockaddr* address, int* addrlen);
 
-    }
+      typedef int __stdcall GetAddrInfoExA_t(const char* Name, const char* ServiceName, uint32_t NameSpace, const ntl::nt::guid* NspId, 
+        const addrinfoex_a* Hints, addrinfoex_a** Result, const timeval* Timeout, overlapped* Overlapped, completion_routine_t* CompletionRoutine, nt::legacy_handle* NameHandle);
+
+    } // wsa
 
     struct functions_t:
       private ntl::noncopyable
@@ -354,11 +374,25 @@ namespace ntl { namespace network {
       recvfrom_t* recvfrom;
 
       select_t* select;
+
+      struct  
+      {
+        wsa::SocketW_t*   socket;
+        wsa::Connect_t*   connect;
+        wsa::Send_t*      send;
+        wsa::Recv_t*      recv;
+        wsa::SendTo_t*    sendto;
+        wsa::RecvFrom_t*  recvfrom;
+        wsa::Ioctl_t*     ioctl;
+        wsa::GetAddrInfoExA_t* getaddrinfoA;
+      } async;
       
       bool initialized;
     private:
       functions_t& operator=(const functions_t&) __deleted;
     };
+
+    
 
 
     class winsock_runtime
@@ -422,8 +456,17 @@ namespace ntl { namespace network {
           NTL_IMP(select);
           #undef NTL_IMP
 
+          funcs.async.socket = ws->find_export<wsa::SocketW_t*>("WSASocketW");
+          funcs.async.connect = ws->find_export<wsa::Connect_t*>("WSAConnect");
+          funcs.async.send = ws->find_export<wsa::Send_t*>("WSASend");
+          funcs.async.recv = ws->find_export<wsa::Recv_t*>("WSARecv");
+          funcs.async.sendto = ws->find_export<wsa::SendTo_t*>("WSASendTo");
+          funcs.async.recvfrom = ws->find_export<wsa::RecvFrom_t*>("WSARecvFrom");
+          funcs.async.ioctl = ws->find_export<wsa::Ioctl_t*>("WSAIoctl");
+          funcs.async.getaddrinfoA = ws->find_export<wsa::GetAddrInfoExA_t*>("GetAddrInfoExA");
+
           // check import
-          const void **first = (const void**)&funcs, **last = (const void**)&funcs.initialized;
+          const void **first = (const void**)&funcs, **last = (const void**)&funcs.initialized; //-V580
           bool ok = true;
           do{
             if(!*first){
@@ -476,18 +519,23 @@ namespace ntl { namespace network {
         if(re != socket_error)
           ec.clear();
         else
-          sockerror(ec);
+          make_error(ec);
         return re != socket_error;
       }
       static std::error_code success(std::error_code& ec)
       {
         return ec.clear(), ec;
       }
-      static std::error_code sockerror(std::error_code& ec)
+      static std::error_code make_error(std::error_code& ec)
       {
         // TODO: map win32 errors to network
+        // TODO: map ntstatus errors to network (https://github.com/joyent/libuv/blob/master/src/win/winsock.c#L153)
         const winsock::sockerror::type errc = winsock::sockerror::get();
         return ec = std::make_error_code(static_cast<std::tr2::network::error::error_type>(errc));
+      }
+      static std::error_code make_error(winsock::sockerror::type err)
+      {
+        return std::make_error_code(static_cast<std::tr2::network::error::error_type>(err));
       }
     public:
       winsock_service_base()

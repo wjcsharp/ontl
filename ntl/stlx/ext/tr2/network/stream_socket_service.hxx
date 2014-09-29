@@ -15,7 +15,7 @@ namespace std { namespace tr2 { namespace network {
 
 
   /**
-   *	@brief 5.7.9. Class template stream_socket_service
+   *  @brief 5.7.9. Class template stream_socket_service
    **/
   template<class Protocol>
   class stream_socket_service:
@@ -28,8 +28,11 @@ namespace std { namespace tr2 { namespace network {
     ///\name types:
     typedef Protocol protocol_type;
     typedef typename Protocol::endpoint endpoint_type;
-    typedef typename service_implementation_type::implementation_type implementation_type;
+
     typedef typename service_implementation_type::native_type native_type;
+    typedef typename service_implementation_type::wait_status_type wait_status_type;
+    typedef typename service_implementation_type::implementation_type implementation_type;
+
 
     ///\name constructors:
     explicit stream_socket_service(tr2::sys::io_service& ios)
@@ -72,6 +75,7 @@ namespace std { namespace tr2 { namespace network {
     bool wait(const implementation_type& impl, socket_base::wait_type check, std::error_code& ec) { return svc.wait(impl, check, ec); }
     template <class Rep, class Period>
     bool wait_for(const implementation_type& impl, socket_base::wait_type check, const std::chrono::duration<Rep, Period>& rel_time, std::error_code& ec) { return svc.wait_for(impl, check, rel_time, ec); }
+    size_t wait_with(const implementation_type& impl, wait_status_type* sockets, size_t count, std::error_code& ec) { return svc.wait_with(impl, sockets, count, ec); }
     ///\}
   private:
     void shutdown_service() { svc.shutdown_service(); }

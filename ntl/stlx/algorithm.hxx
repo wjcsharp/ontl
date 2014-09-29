@@ -211,8 +211,7 @@ bool
 }
 
 
-template
-<class InputIterator1, class InputIterator2, class BinaryPredicate>
+template<class InputIterator1, class InputIterator2, class BinaryPredicate>
 __forceinline
 bool
   equal(InputIterator1 first1, InputIterator1 last1,
@@ -223,6 +222,24 @@ bool
   return true;
 }
 
+template<class InputIterator1, class InputIterator2>
+__forceinline
+bool equal(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, InputIterator2 last2)
+{
+  for ( ; first1 != last1 && first2 != last2; ++first1, ++first2 )
+    if ( !(*first1 == *first2) ) return false;
+  return true;
+}
+
+
+template<class InputIterator1, class InputIterator2, class BinaryPredicate>
+__forceinline
+bool equal(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, InputIterator2 last2, BinaryPredicate pred)
+{
+  for ( ; first1 != last1 && first2 != last2; ++first1, ++first2 )
+    if ( !pred(*first1, *first2) ) return false;
+  return true;
+}
 
 template<class ForwardIterator1, class ForwardIterator2>
 __forceinline
@@ -454,6 +471,37 @@ inline void swap(T& a, T& b)
 #endif
 }
 
+
+template <class T, size_t N>
+inline void swap(T (&a)[N], T (&b)[N])
+{
+  swap_ranges(a, a+N, b);
+}
+
+
+#ifndef NTL_CXX_RV
+template <class T, class U> inline T exchange(T& obj, U& new_val)
+{
+  T old_val(obj);
+  obj = new_val;
+  return old_val;
+}
+template <class T, class U> inline T exchange(T& obj, const U& new_val)
+{
+  T old_val(obj);
+  obj = new_val;
+  return old_val;
+}
+#else
+
+template <class T, class U> 
+inline T exchange(T& obj, U&& new_val)
+{
+  T old_val = std::move(obj);
+  obj = std::forward<U>(new_val);
+  return old_val;
+}
+#endif
 
 template<class ForwardIterator1, class ForwardIterator2>
 __forceinline
@@ -1080,55 +1128,150 @@ OutputIterator
                            OutputIterator result, Compare comp);
 
 ///\name 25.3.6, heap operations:
-template<class RandomAccessIterator>
-inline
-void
-  push_heap(RandomAccessIterator first, RandomAccessIterator last);
+
+namespace __
+{
+  template<class Compare, class RandomAccessIterator>
+  inline void push_heap_front(RandomAccessIterator first, RandomAccessIterator last, Compare comp, typename iterator_traits<RandomAccessIterator>::difference_type count)
+  {
+    typedef typename iterator_traits<RandomAccessIterator>::difference_type difference_type;
+    typedef typename iterator_traits<RandomAccessIterator>::value_type value_type;
+    if(count <= 1)
+      return;
+    
+    difference_type p = 0, c = 2;
+    RandomAccessIterator pp = first, cp = first + c;
+
+    if(c == count || comp(*cp, *(cp - 1))) {
+      --c;
+      --cp;
+    }
+    if(comp(*pp, *cp)) {
+      value_type tmp = std::move(*pp);
+      do {
+        *pp = std::move(*cp);
+        pp = cp;
+        p = c;
+        c = (p + 1) * 2;
+        if(c > count)
+          break;
+
+        cp = first + c;
+        if(c == count || comp(*cp, *(cp - 1))) {
+          --c;
+          --cp;
+        }
+      } while(comp(tmp, *cp));
+      *pp = std::move(tmp);
+    }
+  }
+
+  template<class Compare, class RandomAccessIterator>
+  inline void push_heap_back(RandomAccessIterator first, RandomAccessIterator last, Compare comp, typename iterator_traits<RandomAccessIterator>::difference_type count)
+  {
+    typedef typename iterator_traits<RandomAccessIterator>::difference_type difference_type;
+    typedef typename iterator_traits<RandomAccessIterator>::value_type value_type;
+    if(count <= 1)
+      return;
+
+    count = (count - 2) / 2;
+    RandomAccessIterator ptr = first + count;
+    if(comp(*ptr, *--last)) {
+      value_type tmp = std::move(*last);
+      do {
+        *last = std::move(*ptr);
+        last = ptr;
+        if(count == 0)
+          break;
+
+        count = (count - 1) / 2;
+        ptr = first + count;
+      } while(comp(*ptr, tmp));
+      *last = std::move(tmp);
+    }
+  }
+
+  template<class Compare, class RandomAccessIterator>
+  inline void pop_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp, typename iterator_traits<RandomAccessIterator>::difference_type count)
+  {
+    if(count > 1) {
+      swap(*first, *--last);
+      push_heap_front<Compare>(first, last, comp, count-1);
+    }
+  }
+
+}
 
 template<class RandomAccessIterator, class Compare>
-inline
-void
-  push_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
+inline void push_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+{
+  __::push_heap_back<Compare>(first, last, comp, last - first);
+}
 
 template<class RandomAccessIterator>
-inline
-void
-  pop_heap(RandomAccessIterator first, RandomAccessIterator last);
+inline void push_heap(RandomAccessIterator first, RandomAccessIterator last)
+{
+  push_heap(first, last, less<typename iterator_traits<RandomAccessIterator>::value_type>());
+}
 
 template<class RandomAccessIterator, class Compare>
-inline
-void
-  pop_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
+inline void pop_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+{
+  __::pop_heap<Compare>(first, last, comp, last-first);
+}
 
 template<class RandomAccessIterator>
-inline
-void
-  make_heap(RandomAccessIterator first, RandomAccessIterator last);
+inline void pop_heap(RandomAccessIterator first, RandomAccessIterator last)
+{
+  pop_heap(first, last, less<typename iterator_traits<RandomAccessIterator>::value_type>());
+}
 
 template<class RandomAccessIterator, class Compare>
-inline
-void
-  make_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
+inline void make_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+{
+  typedef typename iterator_traits<RandomAccessIterator>::difference_type difference_type;
+  difference_type n = last - first;
+  if(n > 1) {
+    last = first;
+    ++last;
+    for(difference_type i = 1; i < n;) {
+      __::push_heap_back<Compare>(first, ++last, comp, ++i);
+    }
+  }
+}
 
 template<class RandomAccessIterator>
-inline
-void
-  sort_heap(RandomAccessIterator first, RandomAccessIterator last);
+inline void make_heap(RandomAccessIterator first, RandomAccessIterator last)
+{
+  return make_heap(first, last, less<typename iterator_traits<RandomAccessIterator>::value_type>());
+}
 
 template<class RandomAccessIterator, class Compare>
-inline
-void
-  sort_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
+inline void sort_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+{
+  typedef typename iterator_traits<RandomAccessIterator>::difference_type difference_type;
+  for(difference_type n = last - first; n > 1; --last, --n)
+    __::pop_heap<Compare>(first, last, comp, n);
+}
 
 template<class RandomAccessIterator>
-bool is_heap(RandomAccessIterator first, RandomAccessIterator last);
-template<class RandomAccessIterator, class Compare>
-bool is_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
+inline void sort_heap(RandomAccessIterator first, RandomAccessIterator last)
+{
+  sort_heap(first, last, less<typename iterator_traits<RandomAccessIterator>::value_type>());
+}
+
 template<class RandomAccessIterator>
-RandomAccessIterator is_heap_until(RandomAccessIterator first, RandomAccessIterator last);
+inline bool is_heap(RandomAccessIterator first, RandomAccessIterator last);
+
 template<class RandomAccessIterator, class Compare>
-RandomAccessIterator is_heap_until(RandomAccessIterator first, RandomAccessIterator last,
-                                   Compare comp);
+inline bool is_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
+
+template<class RandomAccessIterator>
+inline RandomAccessIterator is_heap_until(RandomAccessIterator first, RandomAccessIterator last);
+
+template<class RandomAccessIterator, class Compare>
+inline RandomAccessIterator is_heap_until(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
+
 
 ///\name 25.4.7 Minimum and maximum [alg.min.max]
 #ifdef min
@@ -1238,13 +1381,50 @@ inline
 ForwardIterator
   max_element(ForwardIterator first, ForwardIterator last, Compare comp);
 
-template<class ForwardIterator>
-pair<ForwardIterator, ForwardIterator>
-minmax_element(ForwardIterator first, ForwardIterator last);
 template<class ForwardIterator, class Compare>
-pair<ForwardIterator, ForwardIterator>
-minmax_element(ForwardIterator first, ForwardIterator last, Compare comp);
+inline pair<ForwardIterator, ForwardIterator> minmax_element(ForwardIterator first, ForwardIterator last, Compare comp)
+{
+  pair<ForwardIterator, ForwardIterator> re(first, first);
+  if(first != last) {
+    if(++first != last) {
+      if(comp(*first, *re.first))
+        re.first = first;
+      else
+        re.second = first;
 
+      while(++first != last) {
+        ForwardIterator i = first;
+        if(++first == last) {
+          // last pass
+          if(comp(*i, *re.first))
+            re.first = i;
+          else if(!comp(*i, *re.second))
+            re.second = i;
+          break;
+        }
+
+        if(comp(*first, *i)) {
+          if(comp(*first, *re.first))
+            re.first = first;
+          if(!comp(*i, *re.second))
+            re.second = i;
+        } else {
+          if(comp(*i, *re.first))
+            re.first = i;
+          if(!comp(*first, *re.second))
+            re.second = first;
+        }
+      }
+    }
+  }
+  return re;
+}
+
+template<class ForwardIterator>
+inline pair<ForwardIterator, ForwardIterator> minmax_element(ForwardIterator first, ForwardIterator last)
+{
+  return minmax_element(first, last, less<typename iterator_traits<ForwardIterator>::value_type>());
+}
 
 ///\name 25.3.8 Lexicographical comparison [alg.lex.comparison]
 template<class InputIterator1, class InputIterator2>

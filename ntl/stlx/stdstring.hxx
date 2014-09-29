@@ -55,6 +55,7 @@ typedef int64_t streamoff;
 template<class charT> struct char_traits;
 
 #ifdef __ICL
+#pragma warning(push)
 #pragma warning(disable:2259) // non-pointer conversion from "std::uint_least16_t" to "unsigned char" may lose significant bits
 #endif
 
@@ -173,7 +174,7 @@ struct char_traits<char32_t>
   static constexpr int_type eof() { return static_cast<int_type>(EOF); }
 };
 #ifdef __ICL
-#pragma warning(default:2259)
+#pragma warning(pop)
 #endif
 
 /// 21.1.3.4 struct char_traits<wchar_t> [char.traits.specializations.wchar.t]
@@ -2194,6 +2195,33 @@ template <> struct hash<std::wstring>: __::string_hash<std::wstring>{};
 template <> struct hash<std::u16string>: __::string_hash<std::u16string>{};
 template <> struct hash<std::u32string>: __::string_hash<std::u32string>{};
 
+
+//////////////////////////////////////////////////////////////////////////
+// string literals
+__inline_ns namespace literals
+{
+	/// suffix for basic_string literals [21.7]
+	__inline_ns namespace string_literals
+	{
+#ifdef NTL_CXX_UDL
+    #pragma warning(push)
+    #pragma warning(disable:4455)
+		inline string			operator "" s(const char			*str, size_t len) { return string		(str, len); }
+		inline wstring		operator "" s(const wchar_t		*str, size_t len) { return wstring	(str, len); };
+	#ifdef NTL_CXX_CHARS
+		inline u16string	operator "" s(const char16_t	*str, size_t len) { return u16string(str, len); };
+		inline u32string	operator "" s(const char32_t	*str, size_t len) { return u32string(str, len); };
+	#endif
+		#pragma warning(pop)
+#endif
+	} // string_lierals ns
+} // literals ns
+
+#ifndef NTL_CXX_NS
+	// inline namespace 
+	using namespace literals;
+	using namespace literals::string_literals;
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////

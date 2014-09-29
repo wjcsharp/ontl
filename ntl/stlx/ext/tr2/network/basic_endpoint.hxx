@@ -39,7 +39,7 @@ namespace std { namespace tr2 {
       basic_endpoint(const InternetProtocol& proto, unsigned short port_num)
       {
         memset(&storage, 0, sizeof(storage));
-        sa.family = proto.family();
+        sa.family = static_cast<uint16_t>(proto.family());
         sa.port = ntl::big_endian(port_num);
       }
       basic_endpoint(const ip::address& addr, unsigned short port_num)
@@ -111,7 +111,7 @@ namespace std { namespace tr2 {
         return std::move(s);
       }
 
-      static basic_endpoint from_string(const string& str, error_code& ec = throws())
+      static basic_endpoint from_string(const string_ref& str, error_code& ec = throws())
       {
         // [addr6]:port or addr4:port
         if(&ec != &throws())

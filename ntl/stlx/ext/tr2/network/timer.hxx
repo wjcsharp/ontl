@@ -18,7 +18,7 @@
 
 #include "../../function.hxx"
 
-#include "io_service_fwd.hxx"
+#include "iocp/wait_op.hxx"
 
 namespace std { namespace tr2 { namespace sys {
 
@@ -46,18 +46,17 @@ namespace std { namespace tr2 { namespace sys {
 
 
   /**
-   *	@brief 5.4.4. Class template deadline_timer_service
+   *  @brief 5.4.4. Class template deadline_timer_service
    **/
   template<class Time, class TimeTraits>
   class deadline_timer_service:
     public io_service::service
   {
+    typedef __::timer_scheduler scheduler_type;
   public:
     struct implementation_type:
       private ntl::noncopyable
     {
-      typedef function<void(const error_code&)> handler_t;
-      handler_t       handler;
       ntl::nt::timer  tm;
       Time            tp;
 
@@ -65,17 +64,17 @@ namespace std { namespace tr2 { namespace sys {
         :tm(tm.manual_reset)
       {}
 
-      void reset(const Time& t)
+      bool reset(const Time& t)
       {
         tp = t;
-        tm.set(t, routine, this);
+        return tm.set(t, nullptr, this);
       }
     private:
       static void __stdcall routine(void* ctx, uint32_t, int32_t)
       {
-        implementation_type& self = reinterpret_cast<implementation_type&>(ctx);
-        if(self.handler)
-          self.handler(error_code()); // error_code = success
+        implementation_type* self = reinterpret_cast<implementation_type*>(ctx);
+        if(self->handler)
+          self->handler(error_code()); // error_code = success
       }
     };
 
@@ -90,7 +89,8 @@ namespace std { namespace tr2 { namespace sys {
     //typedef unspecified implementation_type;
 
     explicit deadline_timer_service(io_service& ios)
-      :service(ios)
+      : service(ios)
+      , scheduler(use_service<scheduler_type>(ios))
     {}
 
     /** Initialises the timer implementation \p impl. */
@@ -109,10 +109,9 @@ namespace std { namespace tr2 { namespace sys {
       cancelled operations shall be passed the error code \c error::operation_canceled.  */
     size_t cancel(implementation_type& impl, error_code& ec) __ntl_nothrow
     {
-      size_t c = 0;
-      if(impl.tm.cancel())
-        c++, ec.clear();
-      else
+      ec.clear();
+      size_t c = scheduler.remove_timer(impl.tm.get());
+      if(!impl.tm.cancel())
         ec = std::make_error_code(impl.tm.last_status());
       return c;
     }
@@ -124,23 +123,25 @@ namespace std { namespace tr2 { namespace sys {
       wait operations */
     size_t expires_at(implementation_type& impl, const time_type& t, error_code& ec) __ntl_nothrow
     {
-      size_t c = cancel(impl, ec);
-      impl.reset(t);
+      const size_t c = cancel(impl, ec);
+      if(!impl.reset(t))
+        ec = std::make_error_code(impl.tm.last_status());
       return c;
     }
 
     /** Returns a duration from now to the expiry time associated with the timer implementation \p impl */
     duration_type expires_from_now(const implementation_type& impl) const __ntl_nothrow
     {
-      return traits_type::substract(impl.tp, traits_time::now());
+      return traits_type::subtract(impl.tp, traits_type::now());
     }
 
     /** Sets the expiry time associated with the timer implementation \p impl. Implicitly cancels asynchronous 
       wait operations */
     size_t expires_from_now(implementation_type& impl, const duration_type& d, error_code& ec) __ntl_nothrow
     {
-      size_t c = cancel(impl, ec);
-      impl.reset(traits_type::add(traits_type::now(), d));
+      const size_t c = cancel(impl, ec);
+      if(!impl.reset(traits_type::add(traits_type::now(), d)))
+        ec = std::make_error_code(impl.tm.last_status());
       return c;
     }
 
@@ -161,12 +162,19 @@ namespace std { namespace tr2 { namespace sys {
     template<class WaitHandler>
     void async_wait(implementation_type& impl, WaitHandler handler)
     {
-      impl.handler = handler;
+      typedef __::wait_operation<WaitHandler> op;
+      typename op::ptr p (handler);
+
+      const __::timer_scheduler::timer_data data = { impl.tm.get(), p.op, std::chrono::duration_cast<ntl::nt::system_duration>(impl.tp.time_since_epoch()) };
+      scheduler.add_timer(data.h, &data);
+      p.release();
     }
 
   private:
     virtual void shutdown_service()
     {}
+
+    scheduler_type& scheduler;
   };
 
 
@@ -181,7 +189,7 @@ namespace std { namespace tr2 { namespace sys {
 
 
   /**
-   *	@brief 5.4.5. Class template basic_deadline_timer
+   *  @brief 5.4.5. Class template basic_deadline_timer
    *  @details The basic_deadline_timer class template provides the ability to perform a blocking or asynchronous wait for a timer to expire.
    **/
   template<class Time, class TimeTraits, class TimerService>
@@ -289,7 +297,7 @@ namespace std { namespace tr2 { namespace sys {
 
 
   /**
-   *	@brief 5.4.6. Class template basic_periodic_timer
+   *  @brief 5.4.6. Class template basic_periodic_timer
    *  @details The basic_periodic_timer class template provides the ability to perform a blocking or asynchronous periodic timer.
    **/
   template<class Time, class TimeTraits, class TimerService>
